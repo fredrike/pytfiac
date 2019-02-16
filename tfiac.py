@@ -1,10 +1,9 @@
 """Python3 library for climate device using the TFIAC protocol."""
 import logging
 
-UDP_PORT = 7777
-
 _LOGGER = logging.getLogger(__name__)
 
+UDP_PORT = 7777
 MIN_TEMP = 61
 MAX_TEMP = 88
 
@@ -16,7 +15,6 @@ SWING_LIST = [
     'Horizontal',
     'Both',
 ]
-
 CURR_TEMP = 'current_temp'
 TARGET_TEMP = 'target_temp'
 OPERATION_MODE = 'operation'
@@ -24,9 +22,9 @@ FAN_MODE = 'fan_mode'
 SWING_MODE = 'swing_mode'
 ON_MODE = 'is_on'
 
-STATUS_MESSAGE = '<msg msgid="SyncStatusReq" type="Control" seq="{seq:.0f}">' \
+STATUS_MESSAGE = '<msg msgid="SyncStatusReq" type="Control" seq="{seq}">' \
                  '<SyncStatusReq></SyncStatusReq></msg>'
-SET_MESSAGE = '<msg msgid="SetMessage" type="Control" seq="{seq:.0f}">' + \
+SET_MESSAGE = '<msg msgid="SetMessage" type="Control" seq="{seq}">' + \
               '<SetMessage>{message}</SetMessage></msg>'
 
 UPDATE_MESSAGE = '<TurnOn>{{{}}}</TurnOn>'.format(ON_MODE) + \
@@ -64,7 +62,7 @@ class Tfiac():
     @property
     def _seq(self):
         from time import time
-        return time() * 1000
+        return str(int(time() * 1000))[-7:]
 
     def send(self, message):
         """Send message."""
@@ -86,8 +84,8 @@ class Tfiac():
             _status = dict(xmltodict.parse(response)['msg']['statusUpdateMsg'])
             _LOGGER.debug("Current status %s", _status)
             self._name = _status['DeviceName']
-            self._status[CURR_TEMP] = float(_status['IndoorTemp'])
-            self._status[TARGET_TEMP] = float(_status['SetTemp'])
+            self._status[CURR_TEMP] = round(float(_status['IndoorTemp']),2)
+            self._status[TARGET_TEMP] = round(float(_status['SetTemp']),2)
             self._status[OPERATION_MODE] = _status['BaseMode']
             self._status[FAN_MODE] = _status['WindSpeed']
             self._status[ON_MODE] = _status['TurnOn']
