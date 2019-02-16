@@ -1,4 +1,4 @@
-from tfiac import Tfiac, ON_MODE, OPERATION_MODE, TARGET_TEMP
+from tfiac import Tfiac, ON_MODE, OPERATION_MODE, TARGET_TEMP, FAN_MODE, SWING_MODE, SET_SWING
 from time import sleep
 import unittest
 
@@ -7,6 +7,8 @@ HOST = '192.168.1.108'
 
 OPERATION_LIST = ['heat', 'selfFeel', 'dehumi', 'fan', 'cool']
 FAN_LIST = ['Auto', 'Low', 'Middle', 'High']
+FAN_LIST_LIMIT = ['Low', 'Middle', 'High']
+
 SWING_LIST = [
     'Off',
     'Vertical',
@@ -59,17 +61,48 @@ class TfiacTest(unittest.TestCase):
         self.switch(self.tfiac, 'off')
         sleep(LONG_WAIT)
 
+    def test_fan_modes(self):
+        self.switch(self.tfiac, 'on')
+        for curr_mode in ['heat', 'selfFeel', 'cool']:
+            self.change_operative_mode(self.tfiac, curr_mode)
+            for curr_fan in FAN_LIST:
+                self.tfiac.set_state(FAN_MODE, curr_fan)
+                sleep(SHORT_WAIT)
+                self.tfiac.update()
+                self.assertEqual(self.tfiac.status[FAN_MODE], curr_fan)
+        self.change_operative_mode(self.tfiac, 'fan')
+        for curr_fan in FAN_LIST_LIMIT:
+            self.tfiac.set_state(FAN_MODE, curr_fan)
+            sleep(SHORT_WAIT)
+            self.tfiac.update()
+            self.assertEqual(self.tfiac.status[FAN_MODE], curr_fan)
+        self.switch(self.tfiac, 'off')
     
+    def test_swing(self):
+        self.switch(self.tfiac, 'on')
+        for curr_mode in OPERATION_LIST:
+            self.change_operative_mode(self.tfiac, curr_mode)
+            for curr_swing in SET_SWING:
+                self.tfiac.set_swing(curr_swing)
+                sleep(SHORT_WAIT)
+                self.tfiac.update()
+                self.assertEqual(self.tfiac.status[SWING_MODE], curr_swing)
+        self.switch(self.tfiac, 'off')
+
+
+
     def set_temp(self, tfiac, temperature):
+        print("Setting temperature: {}.".format(temperature))
         tfiac.set_state(TARGET_TEMP, temperature)
         sleep(LONG_WAIT)
         tfiac.update()
-        self.assertAlmostEqual(tfiac.status[TARGET_TEMP], temperature, 0, "Tried to set {} and got {}".format(temperature,
+        self.assertTrue(abs(tfiac.status[TARGET_TEMP] - temperature)<=1.0, "Tried to set {} and got {}".format(temperature,
             tfiac.status[TARGET_TEMP]))
 
     def test_temperatures(self):
         self.switch(self.tfiac, 'on')
         for curr_mode in ['heat', 'selfFeel', 'cool']:
+            print ("Currently testing {} mode.".format(curr_mode))
             self.change_operative_mode(self.tfiac, curr_mode)
             self.set_temp(self.tfiac, MIN_TEMP)
             sleep(LONG_WAIT)
@@ -78,7 +111,7 @@ class TfiacTest(unittest.TestCase):
             middle_point = int((MIN_TEMP+MAX_TEMP)/2)
             self.set_temp(self.tfiac, middle_point)
             sleep(LONG_WAIT)
-            for incr_temp in range(middle_point-3, middle_point+2):
+            for incr_temp in range(middle_point-6, middle_point+6, 2):
                 self.set_temp(self.tfiac, incr_temp)
                 sleep(SHORT_WAIT)
         self.switch(self.tfiac, 'off')
