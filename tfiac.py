@@ -84,8 +84,8 @@ class Tfiac():
             _status = dict(xmltodict.parse(response)['msg']['statusUpdateMsg'])
             _LOGGER.debug("Current status %s", _status)
             self._name = _status['DeviceName']
-            self._status[CURR_TEMP] = round(float(_status['IndoorTemp']),2)
-            self._status[TARGET_TEMP] = round(float(_status['SetTemp']),2)
+            self._status[CURR_TEMP] = round(float(_status['IndoorTemp']), 2)
+            self._status[TARGET_TEMP] = round(float(_status['SetTemp']), 2)
             self._status[OPERATION_MODE] = _status['BaseMode']
             self._status[FAN_MODE] = _status['WindSpeed']
             self._status[ON_MODE] = _status['TurnOn']
