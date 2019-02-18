@@ -87,6 +87,8 @@ class Tfiac():
             return data
         except socket.timeout:
             self._available = False
+        else:
+            self._available = True
 
     def update(self):
         """Update the state of the A/C."""
