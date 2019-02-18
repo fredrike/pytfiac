@@ -49,6 +49,10 @@ SET_SWING = {
 }
 
 
+class Unavailable(Exception):
+    """Raised when the socket timeout."""
+
+
 class Tfiac():
     """TFIAC class to handle connections."""
 
@@ -57,7 +61,13 @@ class Tfiac():
         self._host = host
         self._status = {}
         self._name = None
+        self._available = True
         self.update()
+
+    @property
+    def available(self):
+        """Return if the device is available."""
+        return self._available
 
     @property
     def _seq(self):
@@ -68,12 +78,15 @@ class Tfiac():
         """Send message."""
         import socket
         _LOGGER.debug("Sending message: %s", message.encode())
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(5)  # 5 second timeout
-        sock.sendto(message.encode(), (self._host, UDP_PORT))
-        data = sock.recv(4096)
-        sock.close()
-        return data
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.settimeout(5)  # 5 second timeout
+            sock.sendto(message.encode(), (self._host, UDP_PORT))
+            data = sock.recv(4096)
+            sock.close()
+            return data
+        except socket.timeout:
+            self._available = False
 
     def update(self):
         """Update the state of the A/C."""
