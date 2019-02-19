@@ -78,17 +78,21 @@ class Tfiac():
         """Send message."""
         import socket
         _LOGGER.debug("Sending message: %s", message.encode())
+        
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(5)  # 5 second timeout
+        sock.sendto(message.encode(), (self._host, UDP_PORT))
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(5)  # 5 second timeout
-            sock.sendto(message.encode(), (self._host, UDP_PORT))
             data = sock.recv(4096)
-            sock.close()
-            return data
         except socket.timeout:
             self._available = False
+            raise Unavailable()
         else:
             self._available = True
+        finally:
+            sock.close()
+        return data
+        
 
     def update(self):
         """Update the state of the A/C."""
