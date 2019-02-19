@@ -74,16 +74,16 @@ class Tfiac():
         from time import time
         return str(int(time() * 1000))[-7:]
 
-    def send(self, message):
+    async def _send(self, message):
         """Send message."""
         import socket
         _LOGGER.debug("Sending message: %s", message.encode())
-        
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(5)  # 5 second timeout
-        sock.sendto(message.encode(), (self._host, UDP_PORT))
+        await sock.sendto(message.encode(), (self._host, UDP_PORT))
         try:
-            data = sock.recv(4096)
+            yield sock.recv(4096)
         except socket.timeout:
             self._available = False
             raise Unavailable()
@@ -91,14 +91,13 @@ class Tfiac():
             self._available = True
         finally:
             sock.close()
-        return data
-        
+        return
 
-    def update(self):
+    async def update(self):
         """Update the state of the A/C."""
         import xmltodict
         _seq = self._seq
-        response = self.send(STATUS_MESSAGE.format(seq=_seq))
+        response = await self._send(STATUS_MESSAGE.format(seq=_seq))
         try:
             _status = dict(xmltodict.parse(response)['msg']['statusUpdateMsg'])
             _LOGGER.debug("Current status %s", _status)
@@ -121,17 +120,17 @@ class Tfiac():
             value |= 2
         return {0: 'Off', 1: 'Horizontal', 2: 'Vertical', 3: 'Both'}[value]
 
-    def set_state(self, mode, value):
+    async def set_state(self, mode, value):
         """Set the new state of the ac."""
-        self.update()  # make sure we have the latest settings.
+        await self.update()  # make sure we have the latest settings.
         self._status.update({mode: value})
-        self.send(
+        await self._send(
             SET_MESSAGE.format(seq=self._seq,
                                message=UPDATE_MESSAGE).format(**self._status))
 
-    def set_swing(self, value):
+    async def set_swing(self, value):
         """Set swing mode."""
-        self.send(
+        await self._send(
             SET_MESSAGE.format(seq=self._seq, message=SET_SWING[value])
         )
 
