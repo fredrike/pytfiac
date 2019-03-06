@@ -62,7 +62,6 @@ class Tfiac():
         self._status = {}
         self._name = None
         self._available = True
-        self.update()
 
     @property
     def available(self):
