@@ -1,6 +1,7 @@
 """Python3 library for climate device using the TFIAC protocol."""
 import logging
 
+name = "pytfiac"
 _LOGGER = logging.getLogger(__name__)
 
 UDP_PORT = 7777
