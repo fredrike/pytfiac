@@ -1,7 +1,13 @@
 """Python3 library for climate device using the TFIAC protocol."""
+import asyncio
 import logging
+import socket
 
-name = "pytfiac"
+import xmltodict
+from tellsticknet.util import sock_recvfrom, sock_sendto
+
+__version__ = "0.2"
+
 _LOGGER = logging.getLogger(__name__)
 
 UDP_PORT = 7777
@@ -76,26 +82,28 @@ class Tfiac():
 
     async def _send(self, message):
         """Send message."""
-        import socket
         _LOGGER.debug("Sending message: %s", message.encode())
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(5)  # 5 second timeout
-        await sock.sendto(message.encode(), (self._host, UDP_PORT))
-        try:
-            yield sock.recv(4096)
-        except socket.timeout:
-            self._available = False
-            raise Unavailable()
-        else:
-            self._available = True
-        finally:
-            sock.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.setblocking(0)
+            await sock_sendto(sock, message.encode(), (self._host, UDP_PORT))
+            try:
+                data, _ = await asyncio.wait_for(
+                    sock_recvfrom(sock, 1024), 5)
+                return data
+            except socket.timeout:
+                self._available = False
+                raise Unavailable()
+            else:
+                self._available = True
+            finally:
+                sock.close()
         return
 
     async def update(self):
         """Update the state of the A/C."""
-        import xmltodict
         _seq = self._seq
         response = await self._send(STATUS_MESSAGE.format(seq=_seq))
         try:

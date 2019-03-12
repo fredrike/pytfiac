@@ -6,14 +6,15 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pytfiac",
-    version="0.1",
+    version="0.2",
     author="Fredrik Erlandsson, Pablo Mellado",
     author_email="fredrik.e@gmail.com",
     description="API for Tfiac AC",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/fredrike/pytfiac",
-    packages=setuptools.find_packages(),
+    py_modules=["pytfiac"],
+    provides=["pytfiac"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -22,6 +23,7 @@ setuptools.setup(
         "Topic :: Home Automation",
     ],
     install_requires=[
+        'tellsticknet',
         'xmltodict',
     ],
 )
