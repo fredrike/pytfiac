@@ -11,6 +11,7 @@ __version__ = "0.2"
 _LOGGER = logging.getLogger(__name__)
 
 UDP_PORT = 7777
+UDP_BROADCAST_PORT = 10074
 MIN_TEMP = 61
 MAX_TEMP = 88
 
@@ -69,6 +70,26 @@ class Tfiac():
         self._status = {}
         self._name = None
         self._available = True
+        self._should_listen = True
+
+    async def start(self, callback):
+        """Listen for UDP broadcasts."""
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.setblocking(0)
+            sock.bind('', UDP_BROADCAST_PORT)
+            while self._should_listen:
+                try:
+                    data, addr = await asyncio.wait_for(
+                            sock_recvfrom(sock, 1024), 1)
+                    _LOGGER.debug('Received data %s, %s', addr, data)
+                    self.parse_response(data)
+                    callback()
+                except socket.timeout:
+                    pass
+
+    def stop(self):
+        """Stop the listener."""
+        self._should_listen = False
 
     @property
     def available(self):
@@ -98,14 +119,16 @@ class Tfiac():
                 raise Unavailable()
             else:
                 self._available = True
-            finally:
-                sock.close()
         return
 
     async def update(self):
         """Update the state of the A/C."""
         _seq = self._seq
         response = await self._send(STATUS_MESSAGE.format(seq=_seq))
+        self.parse_response(response)
+
+    def parse_response(self, response):
+        """Parse tfiac message."""
         try:
             _status = dict(xmltodict.parse(response)['msg']['statusUpdateMsg'])
             _LOGGER.debug("Current status %s", _status)
