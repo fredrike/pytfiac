@@ -14,6 +14,8 @@ UDP_PORT = 7777
 MIN_TEMP = 61
 MAX_TEMP = 88
 
+SHORT_WAIT = 2
+
 OPERATION_LIST = ['heat', 'selfFeel', 'dehumi', 'fan', 'cool']
 FAN_LIST = ['Auto', 'Low', 'Middle', 'High']
 SWING_LIST = [
@@ -69,6 +71,7 @@ class Tfiac():
         self._status = {}
         self._name = None
         self._available = True
+        self._last_seq = 0
 
     @property
     def available(self):
@@ -104,8 +107,10 @@ class Tfiac():
 
     async def update(self):
         """Update the state of the A/C."""
-        _seq = self._seq
-        response = await self._send(STATUS_MESSAGE.format(seq=_seq))
+        from time import time
+        if time() - self._last_seq < SHORT_WAIT:
+            return
+        response = await self._send(STATUS_MESSAGE.format(seq=self._seq))
         try:
             _status = dict(xmltodict.parse(response)['msg']['statusUpdateMsg'])
             _LOGGER.debug("Current status %s", _status)
@@ -118,6 +123,8 @@ class Tfiac():
             self._status[SWING_MODE] = self._map_winddirection(_status)
         except Exception as ex:  # pylint: disable=W0703
             _LOGGER.error(ex)
+        else:
+            self._last_seq = time()
 
     def _map_winddirection(self, _status):
         """Map WindDirection to swing_mode."""
