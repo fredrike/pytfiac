@@ -139,6 +139,8 @@ class Tfiac():
         """Set the new state of the ac."""
         await self.update()  # make sure we have the latest settings.
         self._status.update({mode: value})
+        if mode == OPERATION_MODE:
+            self._status.update({ON_MODE: "on"})
         await self._send(
             SET_MESSAGE.format(seq=self._seq,
                                message=UPDATE_MESSAGE).format(**self._status))
